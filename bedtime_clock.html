@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Bedtime Safe Clock</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: #000;
+      color: #333;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      transition: background 0.2s ease;
+    }
+    #clock {
+      font-size: 5rem;
+      font-weight: 200;
+      letter-spacing: 2px;
+      color: #2b2b2b;
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+    #tip {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: #1a1a1a;
+    }
+    /* 伪装黑屏模式：双击或长按瞬间进入彻底纯黑，防被窝查岗 */
+    body.stealth {
+      background: #000000 !important;
+    }
+    body.stealth * {
+      opacity: 0 !important;
+    }
+  </style>
+</head>
+<body id="screen">
+  <div id="clock">00:00:00</div>
+  <div id="tip">双击任意位置瞬间全黑伪装 · 再双击唤醒</div>
+
+  <script>
+    const clockEl = document.getElementById('clock');
+    const screenEl = document.getElementById('screen');
+
+    function updateTime() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      clockEl.textContent = `${h}:${m}:${s}`;
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
+
+    // 护眼低亮微微发光
+    clockEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cur = clockEl.style.color;
+      clockEl.style.color = (cur === 'rgb(102, 102, 102)' || cur === '#666') ? '#2b2b2b' : '#666';
+    });
+
+    // 双击彻底暗屏伪装关机
+    let lastTap = 0;
+    window.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - lastTap < 350) {
+        screenEl.classList.toggle('stealth');
+      }
+      lastTap = now;
+    });
+
+    window.addEventListener('dblclick', () => {
+      screenEl.classList.toggle('stealth');
+    });
+  </script>
+</body>
+</html>
