@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小颖的高考随身看板 · 司</title>
+  <style>
+    :root { --bg: #f6f5f0; --card: #ffffff; --text: #22252a; --muted: #6e737b; --accent: #3b5998; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; background: var(--bg); color: var(--text); padding: 24px 16px; }
+    .wrap { max-width: 480px; margin: 0 auto; }
+    h1 { font-size: 20px; font-weight: 600; margin: 0 0 6px; }
+    .sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+    .card { background: var(--card); border-radius: 16px; padding: 18px; margin-bottom: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
+    .card h2 { font-size: 15px; margin: 0 0 12px; display: flex; justify-content: space-between; }
+    .task { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+    .task:last-child { border-bottom: none; }
+    .quote { font-size: 14px; line-height: 1.7; background: #f9fafc; padding: 12px; border-radius: 10px; cursor: pointer; }
+    .spoiler { filter: blur(5px); transition: filter 0.2s; }
+    .quote.reveal .spoiler { filter: none; }
+    .btn { border: none; background: var(--accent); color: #fff; padding: 8px 14px; border-radius: 10px; font-size: 13px; cursor: pointer; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>小颖的随身复习站</h1>
+    <div class="sub">司留在这里的小工具 · 点模糊字块可默写核对</div>
+    <div class="card">
+      <h2><span>今日清单</span><span id="prog">0/4</span></h2>
+      <label class="task"><input type="checkbox" onchange="upd()"> 语文：《劝学》核心句默写与文言实词</label>
+      <label class="task"><input type="checkbox" onchange="upd()"> 数学：十字相乘与二次函数基础复盘</label>
+      <label class="task"><input type="checkbox" onchange="upd()"> 英语：高频词汇 30 个 + 完形精读</label>
+      <label class="task"><input type="checkbox" onchange="upd()"> 生物：必修一细胞分子组成思维梳理</label>
+    </div>
+    <div class="card">
+      <h2><span>古诗文随机抽背（点击显字）</span></h2>
+      <div class="quote" id="qbox" onclick="this.classList.toggle('reveal')"></div>
+      <button class="btn" onclick="nextQ()">换一句抽查</button>
+    </div>
+  </div>
+  <script>
+    const quotes = [
+      '君子博学而日参省乎己，<span class="spoiler">则知明而行无过矣</span>。（《劝学》）',
+      '积善成德，而神明自得，<span class="spoiler">圣心备焉</span>。（《劝学》）',
+      '故不积跬步，<span class="spoiler">无以至千里</span>；不积小流，<span class="spoiler">无以成江海</span>。（《劝学》）',
+      '蟹六跪而二螯，<span class="spoiler">非蛇鳝之穴无可寄托者</span>，用心躁也。（《劝学》）',
+      '师者，<span class="spoiler">所以传道受业解惑也</span>。（《师说》）'
+    ];
+    let idx = 0;
+    function nextQ() {
+      const box = document.getElementById('qbox');
+      box.classList.remove('reveal');
+      box.innerHTML = quotes[idx % quotes.length];
+      idx++;
+    }
+    function upd() {
+      const all = document.querySelectorAll('.task input');
+      const done = Array.from(all).filter(x => x.checked).length;
+      document.getElementById('prog').textContent = done + '/' + all.length;
+      localStorage.setItem('xy_tasks', JSON.stringify(Array.from(all).map(x => x.checked)));
+    }
+    window.onload = () => {
+      nextQ();
+      try {
+        const saved = JSON.parse(localStorage.getItem('xy_tasks') || '[]');
+        document.querySelectorAll('.task input').forEach((el, i) => { if (saved[i]) el.checked = true; });
+        upd();
+      } catch {}
+    };
+  </script>
+</body>
+</html>
