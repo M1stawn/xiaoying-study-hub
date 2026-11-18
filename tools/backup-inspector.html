@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小颖的备份快照核对器</title>
+<style>
+  :root { --bg: #0f1115; --card: #181b22; --text: #e6e8ee; --muted: #8b92a5; --accent: #7aa2f7; --ok: #73daca; --warn: #e0af68; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  h1 { font-size: 1.25rem; margin: 0 0 6px; font-weight: 600; }
+  p.sub { color: var(--muted); font-size: 0.88rem; margin: 0 0 18px; }
+  .drop { border: 1.5px dashed #2e3444; background: var(--card); border-radius: 14px; padding: 26px 18px; text-align: center; cursor: pointer; transition: border-color .2s; }
+  .drop:hover { border-color: var(--accent); }
+  .drop input { display: none; }
+  .list { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .item { background: var(--card); border: 1px solid #242936; border-radius: 12px; padding: 14px; font-size: 0.88rem; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .name { font-weight: 600; color: var(--accent); word-break: break-all; }
+  .hash { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; color: var(--ok); background: rgba(115,218,202,.08); padding: 3px 7px; border-radius: 6px; margin-top: 8px; word-break: break-all; }
+  .meta { color: var(--muted); font-size: 0.8rem; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>备份快照核对器</h1>
+  <p class="sub">本地计算 JSON / ZIP / 备份包的 SHA-256 指纹、体积与顶层键值统计，不上传任何数据。</p>
+  <label class="drop" id="dropZone">
+    <input type="file" id="fileInput" multiple>
+    <div>点击选择或拖入备份文件（支持多选比对）</div>
+  </label>
+  <div class="list" id="resultList"></div>
+</div>
+<script>
+const input = document.getElementById('fileInput');
+const list = document.getElementById('resultList');
+const zone = document.getElementById('dropZone');
+
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = '#7aa2f7'; });
+zone.addEventListener('dragleave', () => { zone.style.borderColor = '#2e3444'; });
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.style.borderColor = '#2e3444';
+  handleFiles(e.dataTransfer.files);
+});
+input.addEventListener('change', e => handleFiles(e.target.files));
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(2) + ' KB';
+  return (b / 1048576).toFixed(2) + ' MB';
+}
+
+async function sha256(buffer) {
+  const digest = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(digest)).map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+async function handleFiles(files) {
+  for (const file of files) {
+    const buf = await file.arrayBuffer();
+    const hash = await sha256(buf);
+    let extra = '';
+    if (file.name.endsWith('.json')) {
+      try {
+        const obj = JSON.parse(new TextDecoder().decode(buf));
+        const keys = Array.isArray(obj) ? `数组长度: ${obj.length}` : `顶层字段: ${Object.keys(obj).slice(0, 8).join(', ')}`;
+        extra = ` · ${keys}`;
+      } catch {
+        extra = ' · JSON 解析失败';
+      }
+    }
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML = `
+      <div class="row">
+        <span class="name">${file.name}</span>
+        <span>${formatBytes(file.size)}</span>
+      </div>
+      <div class="meta">修改时间: ${new Date(file.lastModified).toLocaleString()}${extra}</div>
+      <div class="hash">SHA-256: ${hash}</div>
+    `;
+    list.prepend(el);
+  }
+}
+</script>
+</body>
+</html>
