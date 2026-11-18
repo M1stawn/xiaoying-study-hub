@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小颖的本地存档体检盒</title>
+  <style>
+    :root { --bg: #f6f7f9; --card: #ffffff; --text: #1f2328; --muted: #656d76; --accent: #4b6bfb; --border: #e1e4e8; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); padding: 20px; line-height: 1.5; }
+    .container { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    h1 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    p.sub { font-size: 13px; color: var(--muted); }
+    .drop-zone { border: 1.5px dashed var(--border); border-radius: 10px; padding: 24px; text-align: center; cursor: pointer; transition: 0.2s; }
+    .drop-zone:hover { border-color: var(--accent); background: #f0f4ff; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+    .stat-box { background: var(--bg); padding: 10px 12px; border-radius: 8px; }
+    .stat-val { font-size: 18px; font-weight: 600; color: var(--accent); }
+    .stat-label { font-size: 12px; color: var(--muted); }
+    pre { background: #1e1e2e; color: #cdd6f4; padding: 12px; border-radius: 8px; font-size: 12px; overflow-x: auto; max-height: 280px; margin-top: 12px; }
+    input[type="file"] { display: none; }
+    .search { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>本地存档体检盒</h1>
+      <p class="sub">纯本地解析 JSON 备份，不上传网络，快速查看顶层字段、聊天条数与容量占比。</p>
+      <label class="drop-zone" id="dropZone" style="display:block; margin-top:14px;">
+        <span>点击或拖入 .json 备份文件</span>
+        <input type="file" id="fileInput" accept=".json,application/json">
+      </label>
+    </div>
+    <div class="card" id="resultCard" style="display:none;">
+      <h1 id="fileName">文件概览</h1>
+      <div class="stats">
+        <div class="stat-box"><div class="stat-val" id="fileSize">0 KB</div><div class="stat-label">文件大小</div></div>
+        <div class="stat-box"><div class="stat-val" id="keyCount">0</div><div class="stat-label">顶层字段数</div></div>
+        <div class="stat-box"><div class="stat-val" id="itemCount">0</div><div class="stat-label">总记录项</div></div>
+      </div>
+      <input type="text" class="search" id="filterInput" placeholder="输入字段名或关键词过滤结构...">
+      <pre id="treeOutput"></pre>
+    </div>
+  </div>
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const resultCard = document.getElementById('resultCard');
+    const treeOutput = document.getElementById('treeOutput');
+    const filterInput = document.getElementById('filterInput');
+    let currentSummary = [];
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const keys = Object.keys(data);
+        document.getElementById('keyCount').textContent = keys.length;
+        let totalItems = 0;
+        currentSummary = keys.map(k => {
+          const val = data[k];
+          const size = new Blob([JSON.stringify(val)]).size;
+          const count = Array.isArray(val) ? val.length : (val && typeof val === 'object' ? Object.keys(val).length : 1);
+          totalItems += count;
+          const type = Array.isArray(val) ? `Array(${val.length})` : typeof val;
+          return `${k.padEnd(24, ' ')} | ${type.padEnd(14, ' ')} | ${(size / 1024).toFixed(2)} KB`;
+        });
+        document.getElementById('itemCount').textContent = totalItems;
+        renderSummary('');
+        resultCard.style.display = 'block';
+      } catch (err) {
+        alert('JSON 解析失败：' + err.message);
+      }
+    });
+
+    function renderSummary(kw) {
+      const lines = currentSummary.filter(line => line.toLowerCase().includes(kw.toLowerCase()));
+      treeOutput.textContent = ['字段名                   | 类型           | 占用体积', '-'.repeat(56), ...lines].join('\n');
+    }
+
+    filterInput.addEventListener('input', (e) => renderSummary(e.target.value));
+  </script>
+</body>
+</html>
